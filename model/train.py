@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+import joblib
 
 df = pd.read_csv("../dataset/placement.csv")
 
@@ -11,6 +12,7 @@ y= df["placed"]
 
 scaler= StandardScaler()
 X = scaler.fit_transform(X)
+joblib.dump(scaler, "scaler.pkl")
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size= 0.2)
 X_train= torch.tensor(X_train, dtype= torch.float32)
@@ -56,9 +58,15 @@ for epoch in range(epochs):
         print(f"Epoch {epoch+1}, Loss {loss.item()}")
 
 model.eval()
-student= torch.tensor([[8, 7, 1, 1, 1]], dtype= torch.float32)
-prediction= model(student)
-print("Probability: ", prediction.item())
+
+with torch.no_grad():
+    test_predictions = model(X_test)
+
+    predicted_labels = (test_predictions > 0.5).float()
+
+    accuracy = (predicted_labels == y_test).sum().item() / y_test.shape[0]
+
+print("Test Accuracy:", accuracy)
 
 torch.save(model.state_dict(), "placement_model.pth")
 print("Model saved successfully")
